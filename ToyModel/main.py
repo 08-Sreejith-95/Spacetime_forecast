@@ -30,24 +30,25 @@ from setup import initialize_experiment
 main_config_dir = 'configs'
 ##initializing all the configurations
 #----data configs-----#
-data_configs = OmegaConf.load('ToyModel/Config/M4_config.yaml')
-window_config = OmegaConf.load('ToyModel/Config/window_configs.yaml')
-data_loader_configs = OmegaConf.load('ToyModel/Config/data_loader_configs.yaml')
+root_path = os.getcwd()
+data_configs = OmegaConf.load(join(root_path,'ToyModel/Config/M4_config.yaml'))
+window_config = OmegaConf.load(join(root_path,'ToyModel/Config/window_config.yaml'))
+data_loader_configs = OmegaConf.load(join(root_path,'ToyModel/Config/data_loader_configs.yaml'))
 
 
 
 #----model configs------#
-embedd_config_toy = OmegaConf.load('ToyModel/Config/model_configs/embedding_config_toy.yaml')
-encoder_config_toy = OmegaConf.load('ToyModel/Config/model_configs/encoder_config_toy.yaml')
-decoder_config_toy = OmegaConf.load('ToyModel/Config/model_configs/decoder_config_toy.yaml')
-output_config_toy = OmegaConf.load('ToyModel/Config/model_configs/output_config_toy.yaml')
+embedd_config_toy = OmegaConf.load(join(root_path,'ToyModel/Config/model_configs/embedding_config_toy.yaml'))
+encoder_config_toy = OmegaConf.load(join(root_path,'ToyModel/Config/model_configs/encoder_config_toy.yaml'))
+decoder_config_toy = OmegaConf.load(join(root_path,'ToyModel/Config/model_configs/decoder_config_toy.yaml'))
+output_config_toy = OmegaConf.load(join(root_path,'ToyModel/Config/model_configs/output_config_toy.yaml'))
 
 #creating the network from configs
 encoder_config = init_encoder_decoder_config(encoder_config_toy, join(main_config_dir, 'model'))
 decoder_config = init_encoder_decoder_config(decoder_config_toy, join(main_config_dir, 'model'))
 
 #Training hyperparameter configuration
-train_configs = OmegaConf.load('ToyModel/Config/train_configs.yaml')
+train_configs = OmegaConf.load(join(root_path,'ToyModel/Config/train_configs.yaml'))
 
 #initialize our SpaceTime model
 model_configs = {
