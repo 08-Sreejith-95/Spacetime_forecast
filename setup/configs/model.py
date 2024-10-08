@@ -6,6 +6,8 @@ from omegaconf import OmegaConf
 
 
 # SpaceTime model
+#since the ssm works differently in the encoder block and decoder block special configurations are required. so thats why when building the architecture and for different experiments
+#the model loads them separately. so here the configuration dictionary is loaded by this function accordingly. here first the default config should be read from yaml files and then for experiment
 def load_model_config(config, config_dir='./configs/model', args=None):
     for k in ['embedding_config', 'encoder_config', 
               'decoder_config', 'output_config']:

@@ -18,19 +18,20 @@ from torch.nn import functional as F
 from utils.config import is_list
 
 # Default data path is environment variable or hippo/data
-if (default_data_path := os.getenv("DATA_PATH")) is None:
-    default_data_path = Path(__file__).parent.parent.parent.absolute()
-    default_data_path = default_data_path / "dataloaders" / "data"
+if (default_data_path := os.getenv("DATA_PATH")) is None: # := is walrus operator. It is assignment and condition operator at the same time. here it checks the condition after assigning the value to the variable default_data_path
+    default_data_path = Path(__file__).parent.parent.parent.absolute()#__file__ is a built in variable it give the location of current script. So traveling through the directory tree is relative to this.
+    default_data_path = default_data_path / "dataloaders" / "data" #All the raw datasets should be stored in this directory:- Here is the code containing reading the data
 else:
     default_data_path = Path(default_data_path).absolute()
 
-
+#This SequenceDataset class handled all the primary preprocessing of a data thoroughly.
 class SequenceDataset:
-    registry = {}
+    registry = {} #to register the parent classes as dict
     _name_ = NotImplementedError("Dataset must have shorthand name")
 
-    # Since subclasses do not specify __init__ which is instead handled by this class
-    # Subclasses can provide a list of default arguments which are automatically registered as attributes
+    # Since subclasses do not specify __init__ which is instead handled by this class. All the datasets are subclass of this.But different datasets have different attributes. So we cannot specifically instantiate them here
+    # Subclasses can provide a list of default arguments which are automatically registered as attributes. This is a metaclass concept. I.e., some subclasses requires inheritence from more than one class. So we need to define it
+    #to_do:- the concept of subclass registry is not yet cleared properly. study this.
     # TODO apparently there is a python 3.8 decorator that basically does this
     @property
     def init_defaults(self):
@@ -40,7 +41,7 @@ class SequenceDataset:
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         cls.registry[cls._name_] = cls
-
+    #reading data path. The sequence dataset subclass is instantiated with inherited classes name, data_directory, and the properties of a sequence and keyword argument dataset_cfg
     def __init__(self, _name_, data_dir=None, tbptt=False, chunk_len=None, overlap_len=None, **dataset_cfg):
         assert _name_ == self._name_
         self.data_dir = Path(data_dir).absolute() if data_dir is not None else None
@@ -67,7 +68,7 @@ class SequenceDataset:
     def setup(self):
         """This method should set self.dataset_train, self.dataset_val, and self.dataset_test"""
         raise NotImplementedError
-
+    #function for splitting the datset to train, test and val. Check the dim of sequence x = (b,l,d):- (batch, length, dimension). We need to convert it to (x,y) pairs, where y is the label
     def split_train_val(self, val_split):
         train_len = int(len(self.dataset_train) * (1.0 - val_split))
         self.dataset_train, self.dataset_val = torch.utils.data.random_split(
@@ -122,7 +123,8 @@ class SequenceDataset:
             shuffle=True,
             **kwargs,
         )[0]
-
+    #here the _dataloader function is defined later(see below). Which is a torch.util.data.DataLoader object(This is what we needed before feeding into a network)
+    #The below functions wraps all the data into the Dataloader
     def val_dataloader(self, **kwargs):
         return self._eval_dataloader(self.dataset_val, **kwargs)
 
@@ -151,7 +153,7 @@ class SequenceDataset:
             if dataloaders is not None
             else None
         )
-
+    #These None values are added and conditioned regularly throughout the code, inorder to avoid breakage while running the code, if no inputs are given. This is a good practice of error handling
     def _dataloader(self, dataset, resolutions, **loader_args):
         if dataset is None:
             return None

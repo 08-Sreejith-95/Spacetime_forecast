@@ -1,0 +1,9 @@
+seed: 42
+root: Toymodel/data
+train_path: ToyModel/data/M4/Monthly-train.csv
+test_path: ToyModel/data/M4/Monthly-test.csv
+label_path: ToyModel/data/M4/M4-info.csv
+feature_id: V1
+category: Macro
+timestep: Monthly
+M4id: M267

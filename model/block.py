@@ -10,7 +10,10 @@ from model.mlp import init_mlp
 from model.ssm import init_ssm
 from model.ssm.preprocess import init_preprocess_ssm as init_pre
 
+#Note:- In this module u can experiment on creating new classes for custom architecture design.
 
+
+#structure of a single spacetime block with optional skip connection
 class Block(OurModule):
     """
     Standard encoder block
@@ -27,7 +30,7 @@ class Block(OurModule):
         self.skip_connection = skip_connection
         self.skip_preprocess = skip_preprocess
         
-        self.pre = init_pre(pre_config)
+        self.pre = init_pre(pre_config)#check config file for preprocessing- differencing and denoising
         self.ssm = init_ssm(ssm_config)
         self.mlp = init_mlp(mlp_config)
             
@@ -35,9 +38,9 @@ class Block(OurModule):
         """
         Input shape: B x L x D
         """
-        z = self.pre(u)
-        y = self.ssm(z)
-        y = self.mlp(y)
+        z = self.pre(u)#preprocessing  SSM layer
+        y = self.ssm(z)#The spaacetime layer
+        y = self.mlp(y)#the ssm representations are fed into FCN
         if self.skip_connection and self.skip_preprocess:
             return y + u  # Also skip preprocessing step
         elif self.skip_connection:
@@ -45,7 +48,7 @@ class Block(OurModule):
         else:
             return y
     
-    
+#decoder block recurrent closed loop representation. Additional parameter matrix K will be there. check ssm class  
 class ClosedLoopBlock(Block):
     """
     Block with a closed-loop SSM. 
@@ -78,8 +81,8 @@ class Encoder(nn.Module):
         
     def init_blocks(self, config):
         blocks = []
-        for block in config['blocks']:
-            blocks.append(Block(**block))
+        for block in config['blocks']:#these are the corresponding internal layers like mlp,ssm,prprocess blocks
+            blocks.append(Block(**block))#Number of Spacetime blocks in the Encoder
         return nn.Sequential(*blocks)
     
     def forward(self, x):

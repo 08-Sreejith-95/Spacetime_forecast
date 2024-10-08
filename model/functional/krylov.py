@@ -5,6 +5,7 @@ b : (N,)
 c : (N,)
 Return: [c^T A^i b for i in [L]]
 """
+#one crucial thing is that the resulting sequential tensors ,like the state x, should be contigous in memory. so torch.contigous() is used regularly 
 
 
 import torch
@@ -47,7 +48,7 @@ def krylov_sequential(L, A, b, c=None):
     x = torch.stack(x, dim=-1)
     return x
 
-
+#have a look at the krylov iterative method for matrix multiplication with higher degree
 def krylov(L, A, b, c=None, return_power=False):
     """
     Compute the Krylov matrix (b, Ab, A^2b, ...) using the squaring trick.
@@ -55,16 +56,17 @@ def krylov(L, A, b, c=None, return_power=False):
     If return_power=True, return A^{L-1} as well
     """
     # TODO There is an edge case if L=1 where output doesn't get broadcasted, which might be an issue if caller is expecting broadcasting semantics... can deal with it if it arises
+    #This is used to compute the convolution filter F_x and F_y for (B, AB, A^2B, A^3B, ..., A^{L-1}B), where A-> R^{dxd}, A shape = (...,d, d), x = R^{dxL}  L = sequence length
+    x = b.unsqueeze(-1) # (..., N, 1) #state initialization
+    A_ = A #matrix initialization first power
 
-    x = b.unsqueeze(-1) # (..., N, 1)
-    A_ = A
-
-    AL = None
+    AL = None #Lth power, initially == none. this is iteratively updated
     if return_power:
         AL = torch.eye(A.shape[-1], dtype=A.dtype, device=A.device)
         _L = L-1
 
-    done = L == 1
+    done = L == 1 #if L ==1 -> A{L-1} = I, so initially for the first sample in the sequence, the state is X=0, since there are no history, so this iterative method is initialised 
+    #with X_0 = 0... check the paper for clarity
     # loop invariant: _L represents how many indices left to compute
     while not done:
         if return_power:
@@ -110,7 +112,7 @@ def power(L, A, v=None):
 
     I = torch.eye(A.shape[-1]).to(A) # , dtype=A.dtype, device=A.device)
 
-    powers = [A]
+    powers = [A] #initially just A, later after each iteration in the loop below, it becomes the following list [A,A^2, A^3,....., A^{L-1}]
     l = 1
     while True:
         if L % 2 == 1: I = powers[-1] @ I

@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 from model.ssm.base import SSM
 
-
+#The SSM works differently with their initialization as mentioned in the paper. The first Companion SSM will be for denoising and  differencing. So the differencing SSM is defined here
 class DifferencingSSM(SSM):
     """
     Computes order-N differencing over input sequence

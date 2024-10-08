@@ -6,7 +6,7 @@ Code from https://github.com/HazyResearch/state-spaces/blob/main/src/dataloaders
 - Original dataset: https://github.com/zhouhaoyi/ETDataset
 - Original dataloader: https://github.com/zhouhaoyi/Informer2020
 """
-
+#This dataloader is used for eeth and ettm datasets. Adapt this for our new dataset if required
 from typing import List
 import os
 import numpy as np
@@ -34,6 +34,7 @@ class TimeFeature:
         return self.__class__.__name__ + "()"
 
 
+#The actual time in hrs, minutes and secs are to be normalized in to some range for our computation requirement. So encoding of timescale is necessary for indexing and all. This is coded below. 1 is substracted since the indexing starts from 0.
 class SecondOfMinute(TimeFeature):
     """Minute of hour encoded as value between [-0.5, 0.5]"""
 
@@ -168,6 +169,7 @@ def time_features(dates, timeenc=1, freq="h"):
     > * S - [Second of minute, minute of hour, hour of day, day of week, day of month, day of year]
     *minute returns a number from 0-3 corresponding to the 15 minute period it falls into.
     """
+    #timeenc is time encoder 0 and 1 represents false or true
     if timeenc == 0:
         dates["month"] = dates.date.apply(lambda row: row.month, 1)
         dates["day"] = dates.date.apply(lambda row: row.day, 1)
@@ -191,7 +193,7 @@ def time_features(dates, timeenc=1, freq="h"):
             [feat(dates) for feat in time_features_from_frequency_str(freq)]
         ).transpose(1, 0)
 
-
+#All the statistical normalization of the data is handled by this class. Like 0 mean and 1 standard deviation
 class StandardScaler:
     def __init__(self):
         self.mean = 0.0
@@ -203,7 +205,7 @@ class StandardScaler:
 
     def transform(self, data):
         mean = (
-            torch.from_numpy(self.mean).type_as(data).to(data.device)
+            torch.from_numpy(self.mean).type_as(data).to(data.device)#storing data into the device, gpu, tpu or cpu based on the availability
             if torch.is_tensor(data)
             else self.mean
         )
@@ -227,7 +229,12 @@ class StandardScaler:
         )
         return (data * std) + mean
 
-
+#Informer dataset is defined here. The dataset used is ETTH(Values measured in hours steps) and ETTM(Values measured in minutes Steps) datasets. The raw csv file is transformed into proper sequential pytorch Dataset including the necessary preprocessing is done here
+#Keep in mind that raw dataset is a csv file. First we need to convert into a dataframe(df), eg:- pandas dataframe
+#The informer dataset is the parent class for any dataset we uses. the etth dataset written after this adapts the attributes and methods from this parent class.Todo:- check whether we can create an audio dataset with informer dataset as parent class
+#here the frequencies are in seconds, hours and days. But in audio dataset sampled at 16khz there will be 16k values in 1 second. so for a 10sec audio file it will be huge.
+#so we might create a new parent class for the audio dataset
+#the flag contains [train, val, test], each with associate numbers [0,1,2].so while instantiating the object of this class use these flags for defining train, val and test properly.
 class InformerDataset(Dataset):
     def __init__(
         self,
@@ -278,11 +285,11 @@ class InformerDataset(Dataset):
         # if data_path == 'national_illness.csv':
         #     breakpoint()
 
-    def _borders(self, df_raw):
+    def _borders(self, df_raw): #The data itself is created by taking the reading of a variable in a powerplant for a long period of time. So in sequence processing we need to batch this long sequence, split the sequence into train,test and val dim =(b,l,d). So this method creates borders between these subsequences
         num_train = int(len(df_raw) * 0.7)
         num_test = int(len(df_raw) * 0.2)
         num_vali = len(df_raw) - num_train - num_test
-        border1s = [0, num_train - self.seq_len, len(df_raw) - num_test - self.seq_len]
+        border1s = [0, num_train - self.seq_len, len(df_raw) - num_test - self.seq_len]#these are indexes of the borders of the data splits.
         border2s = [num_train, num_train + num_vali, len(df_raw)]
         return border1s, border2s
 
@@ -306,7 +313,7 @@ class InformerDataset(Dataset):
         border1 = border1s[self.set_type]
         border2 = border2s[self.set_type]
 
-        if self.features == "M":
+        if self.features == "M":  #todo:- check these feature abbreviations M, MS, S, by default in config files it is given S
             cols_data = df_raw.columns[1:]
             df_data = df_raw[cols_data]
         elif self.features == "S" or self.features == "MS":
@@ -331,7 +338,7 @@ class InformerDataset(Dataset):
 
         self.data_stamp = data_stamp
 
-    def __getitem__(self, index):
+    def __getitem__(self, index): #standard coding for a pytorch dataset or a sampler. A sample is [sequence, label,]. 
         s_begin = index
         s_end = s_begin + self.seq_len
         r_begin = s_end - self.label_len
@@ -405,7 +412,7 @@ class InformerDataset(Dataset):
             return 1
         else:
             raise NotImplementedError
-
+#doubt:- why these tokens are 13,32,7,24 and 4
     @property
     def n_tokens_time(self):
         if self.freq == 'h':
@@ -419,7 +426,9 @@ class InformerDataset(Dataset):
 class _Dataset_ETT_hour(InformerDataset):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-
+#converting the values into hours from month to hours. 12months, 30 days 24 hrs so 12 month sequence will be 12*30*24 values/hour. so frequency is in hour here
+#an yearly  data is dicvided such that 4months lagtime(x), 4months label(y) and 4 month prediction horizon
+#doubt:- why there are 2borders?
     def _borders(self, df_raw):
         border1s = [
             0,
@@ -458,7 +467,7 @@ class _Dataset_ETT_minute(_Dataset_ETT_hour):
             12 * 30 * 24 * 4 + 8 * 30 * 24 * 4,
         ]
         return border1s, border2s
-
+#i think the number of tokens indicated below represents number of sequence/frequency. frequency h as described before is like hours, days, month, years. doubt:- clear this
     @property
     def n_tokens_time(self):
         assert self.freq == "t"
@@ -486,6 +495,8 @@ class _Dataset_Traffic(InformerDataset):
     def __init__(self, data_path="traffic.csv", target="OT", **kwargs):
         super().__init__(data_path=data_path, target=target, **kwargs)  
         
+#All the time series data are to be copied in informer folder for smooth reading through the pipeline. its defined in  the class below
+#todo and doubt: check the difference between informer dataset and informer sequence dataset classes.
 class InformerSequenceDataset(SequenceDataset):
 
     @property
@@ -567,6 +578,10 @@ class InformerSequenceDataset(SequenceDataset):
             eval_mask=self.eval_mask,
         )
 
+#eg:_ if the data is created from a powerplant. This data contains readings of the devices in different part of the powerplant.
+#this readings are encoded in different columns in the df.
+# The features here are values of the sequence in the timesteps or frequencies, eg:- S- seconds, Target:- variable measured eg:- 'OT'.
+#
 class ETTHour(InformerSequenceDataset):
     _name_ = "etth"
 

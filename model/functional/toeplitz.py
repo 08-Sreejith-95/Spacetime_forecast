@@ -5,7 +5,10 @@ There are 3 equivalent views:
     2. multiplication of (lower) triangular Toeplitz matrices
     3. polynomial multiplication (mod x^N)
 """
-
+#These functions are defined for faster matrix multiplication with higher degrees and dimensions. Better not touch the code.
+#Krylov and toeplitz are actually iterative methods for faster matrix multiplication
+#To_do:- if the time allows explore for other methods or improvise this method for faster computation
+#Consider this as an auxillary experiment
 import torch
 # import torch.nn as nn
 import torch.nn.functional as F

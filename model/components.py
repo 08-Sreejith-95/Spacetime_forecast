@@ -9,7 +9,7 @@ import torch.nn as nn
 
 from einops import rearrange
 
-
+#custom network for our ssm model
 class OurModule(nn.Module):
     def __init__(self): 
         super().__init__()

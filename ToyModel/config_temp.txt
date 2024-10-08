@@ -1,0 +1,90 @@
+#window configurations
+window_config = """
+lag: 24
+"""
+window_configs = OmegaConf.create(window_config)
+window_configs.horizon = 6
+OmegaConf.save(window_configs, 'ToyModel/Config/window_configs.yaml')
+
+dataloader_configs = """
+batch_size: 32
+num_workers: 2
+pin_memory: true
+"""
+dataloader_configs = OmegaConf.create(dataloader_configs)
+OmegaConf.save(dataloader_configs, 'ToyModel/Config/data_loader_configs.yaml')
+
+embedding_config_toy = """
+method: repeat
+kwargs:
+  input_dim: 1
+  embedding_dim: null
+  n_heads: 4
+  n_kernels: 32
+"""
+embedding_config_toy = OmegaConf.create(embedding_config_toy)
+OmegaConf.save(embedding_config_toy, 'ToyModel/Config/model_configs/embedding_config_toy.yaml')
+
+encoder_config_toy = """
+blocks:
+- input_dim: 128
+  pre_config: 'ssm/preprocess/residual'
+  ssm_config: 'ssm/companion_preprocess'
+  mlp_config: 'mlp/default'
+  skip_connection: true
+  skip_preprocess: false
+"""
+encoder_config_toy = OmegaConf.create(encoder_config_toy)
+OmegaConf.save(encoder_config_toy, 'ToyModel/Config/model_configs/encoder_config_toy.yaml')
+
+decoder_config_toy = """
+blocks:
+- input_dim: 128
+  pre_config: 'ssm/preprocess/none'
+  ssm_config: 'ssm/closed_loop/companion'
+  mlp_config: 'mlp/identity'
+  skip_connection: false
+  skip_preprocess: false
+"""
+decoder_config_toy = OmegaConf.create(decoder_config_toy)
+OmegaConf.save(decoder_config_toy, 'ToyModel/Config/model_configs/decoder_config_toy.yaml')
+
+output_config_toy = """
+input_dim: 128
+output_dim: 1
+method: mlp
+kwargs:
+  input_dim: 128
+  output_dim: 1
+  activation: gelu
+  dropout: 0.2
+  layernorm: false
+  n_layers: 1
+  n_activations: 1
+  pre_activation: true
+  input_shape: bld
+  skip_connection: false
+  average_pool: null
+"""
+output_config_toy = OmegaConf.create(output_config_toy)
+OmegaConf.save(output_config_toy, 'ToyModel/Config/model_configs/output_config_toy.yaml')
+
+train_configs = """
+lr: 1e-3
+weight_decay: 1e-4
+dropout: 0.25
+criterion_weights:
+- 10
+- 1
+- 10
+optimizer: adamw
+scheduler: timm_cosine
+max_epochs: 500
+early_stopping_epochs: 20
+data_transform: mean
+loss: informer_rmse
+val_metric: informer_rmse
+seed: 42
+variant: null
+model: SpaceTime
+"""
