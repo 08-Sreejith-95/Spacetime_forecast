@@ -1,7 +1,7 @@
 import sys
 import os
 from os.path import join
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(os.getcwd()))))
 
 import torch
 import numpy as np
