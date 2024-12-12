@@ -156,10 +156,11 @@ def update_preprocess_config_from_args(config, args):
 
 
 def update_ssm_config_from_args(config, args):
-    if 'companion' in config.method or 'shift' in config.method or 'alpha_ssm' in config.method:
+    if 'companion' in config.method or 'shift' in config.method:
         kwargs = get_companion_ssm_kwargs_from_args(config, args)
+    #---added non comoanion: alpha_ssm----#
     elif 'alpha_ssm' in config.method:
-        kwargs = get_companion_ssm_kwargs_from_args(config, args)
+        kwargs = get_alpha_ssm_kwargs_from_args(config, args)
     else:
         raise NotImplementedError('Still need to implement non-companion SSM')
         
@@ -201,11 +202,11 @@ def get_alpha_ssm_kwargs_from_args(config, args):
         'head_dim': head_dim,
         'kernel_init': args.kernel_init,
         'skip_connection': args.skip_ssm,
-        'norm_order': args.norm_order
+        'norm_order': args.norm_order,
+        'k': args.k, 
+        'n': args.n
     }
-    k = config.k 
-    n= config.n
-    return kwargs, k ,n
+    return kwargs
 #-------------------------------------------------------------#
 
 def update_n_heads(config, args):
