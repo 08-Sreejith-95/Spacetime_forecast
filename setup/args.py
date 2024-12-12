@@ -16,6 +16,9 @@ def initialize_args():
     parser.add_argument('--n_blocks', type=int, default=None)  # Only update encoder blocks
     parser.add_argument('--n_kernels', type=int, default=None)
     parser.add_argument('--n_heads', type=int, default=None)
+    #for alph ssm
+    parser.add_argument('--k', type=int, default=None)
+    parser.add_argument('--n', type=int, default=None)
     
     parser.add_argument('--model_dim', type=int, default=None)
     parser.add_argument('--input_dim', type=int, default=1, 
