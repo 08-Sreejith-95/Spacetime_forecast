@@ -27,7 +27,7 @@ def companion_from_p(p):
     A[..., -1] = p #replacing the final column with our vector p. 
     return A 
 
-
+#To_do: if i want to plugin custom A matrices:- Approach:Introduce a conditional statement to run The krylov by custom matrices if companion is NOne 
 #.....Functions for calculating the convolution filter Fy..... algorithm 1 in paper. ultimately returns Fy
 def companion_krylov(L, p, b, c=None, c_tilde=None):
     """
@@ -48,7 +48,8 @@ def companion_krylov(L, p, b, c=None, c_tilde=None):
     if c_tilde is None:
         assert c is not None, 'at least c or c_tilde must be supplied'
         assert c.shape == p.shape
-        A = companion_from_p(p)
+        #todo; plugin a conditional statement here
+        A = companion_from_p(p)#we can change the code here for initializing differant matrices
         c_tilde = c - torch.einsum('...m,...mn->...n', c, torch.linalg.matrix_power(A, L).to(dtype=c.dtype))#check torch.einsum for clarity. einsum is actually einstein summation notation
     else:
         assert c_tilde.shape == p.shape
@@ -89,8 +90,8 @@ if __name__ == '__main__':
 
     A = companion_from_p(p) #
     print(p.shape)
-    #print(p[...,:-1])
-    #print((A[0,:,-1],A[1,:,-1])) #to check the vectors are initilized randomly 
+    print(p[...,:-1])
+    print((A[0,:,-1],A[1,:,-1])) #to check the vectors are initilized randomly 
 
     from src.ops.krylov import krylov
     K = krylov(L, A, b, c)#convolution filter F_x

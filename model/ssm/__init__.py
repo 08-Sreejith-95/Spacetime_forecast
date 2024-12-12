@@ -1,11 +1,11 @@
-from .companion import CompanionSSM
+from .companion import CompanionSSM, AlphaSSM
 from .shift import ShiftSSM
 from .closed_loop import ClosedLoopCompanionSSM, ClosedLoopShiftSSM
 
-
+#todo:- Add our custom SSM here
 def init_ssm(config):
     supported_methods = ['companion', 'closed_loop_companion',
-                         'shift', 'closed_loop_shift']
+                         'shift', 'closed_loop_shift', 'alpha_ssm'] # to_do add one more ssm:- Custom SSM with alpha_A 
     if config['method'] == 'companion':
         ssm = CompanionSSM
     elif config['method'] == 'closed_loop_companion':
@@ -14,6 +14,8 @@ def init_ssm(config):
         ssm = ShiftSSM
     elif config['method'] == 'closed_loop_shift':
         ssm = ClosedLoopShiftSSM
+    elif config['method'] == 'alpha_ssm':
+        ssm = AlphaSSM
     else:
         raise NotImplementedError(
             f"SSM config method {config['method']} not implemented! Please choose from {supported_methods}")

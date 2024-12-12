@@ -50,7 +50,7 @@ class SSM(OurModule):
         return self.head_dim, self.n_heads
         
     def fft_conv(self, u_input: torch.tensor, v_kernel: torch.tensor):
-        # Convolve u with v in O(n log n) time with FFT (n = len(u))
+        # Convolve u with v in O(n log n) time with FFT (n = len(u))# this is basically F_y*u where F_y =v_f and u = u_f
         L   = u_input.shape[-1]  # Assume u is input
         u_f = torch.fft.rfft(u_input, n=2*L) # (B H L)
         v_f = torch.fft.rfft(v_kernel[:, :L], n=2*L) # (H L)
@@ -76,7 +76,7 @@ class SSM(OurModule):
         if self.kernel_weights is None:
             k = self.get_kernel(u)
             k = repeat(k, 'nk kd -> (kr nk nh hd) kd', 
-                   kr=self.kernel_repeat, nh=self.n_heads, hd=self.head_dim)
+                   kr=self.kernel_repeat, nh=self.n_heads, hd=self.head_dim) #
         else:
             k = self.k
         try:
