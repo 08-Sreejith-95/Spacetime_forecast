@@ -158,7 +158,7 @@ def update_preprocess_config_from_args(config, args):
 def update_ssm_config_from_args(config, args):
     if 'companion' in config.method or 'shift' in config.method:
         kwargs = get_companion_ssm_kwargs_from_args(config, args)
-    #---added non comoanion: alpha_ssm----#
+    #---added non companion: alpha_ssm----#
     elif 'alpha_ssm' in config.method:
         kwargs = get_alpha_ssm_kwargs_from_args(config, args)
     else:

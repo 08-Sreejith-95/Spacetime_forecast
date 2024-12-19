@@ -11,6 +11,6 @@ kwargs:
   kernel_train: true
   skip_connection: true
   norm_order: 1
-  k: 32
-  n: 16
+  k_alpha: 32
+  n_alpha: 16
 

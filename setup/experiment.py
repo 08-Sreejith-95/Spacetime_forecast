@@ -50,7 +50,7 @@ def initialize_experiment(args, experiment_name_id='',
     for arg in ['embedding_config', 'preprocess_config', 'encoder_config', 'decoder_config', 'output_config',
                 'n_blocks', 'n_kernels', 'n_heads', 'kernel_dim', 'kernel_init', 'norm_order', 'lag', 'horizon', 'features', 
                 'data_transform', 'criterion_weights', 'loss', 'dropout', 'lr', 'optimizer', 'scheduler', 
-                'weight_decay', 'batch_size', 'val_metric', 'max_epochs', 'early_stopping_epochs', 'replicate']:
+                'weight_decay', 'batch_size', 'val_metric', 'max_epochs', 'early_stopping_epochs', 'replicate', 'k_alpha', 'n_alpha']: # k and n hyperparameters added for alpha ssm
         try:
             args.experiment_name += f'-{format_arg(arg)}={format_arg(getattr(args, arg), cutoff=None)}'
         except:

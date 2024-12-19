@@ -11,6 +11,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 print(os.getcwd())
 from model.functional.krylov import krylov
+from model.functional.companion_krylov import companion_krylov
 from model.ssm.base import SSM
 
 #Add code here to save A matrix after each epoch to plot the ssm parameter updates
@@ -102,7 +103,7 @@ class CompanionSSM(SSM):
 
 
 
-#Creating SSM with A_alpha:- Thesis project experiment
+#---------------Creating SSM with A_alpha:- Thesis project experiment:- state matrix_1-------------------#
 
 class AlphaSSM(SSM):
     """
@@ -110,18 +111,21 @@ class AlphaSSM(SSM):
     -> y_t = C \sum_{i = 0}^{k - 1 - i} A^k B u_i
        where A is alpha matrix
     """
-    def __init__(self, norm_order, k:int, n:int, **kwargs):
+    def __init__(self, norm_order, **kwargs):
         self.norm_order = norm_order
         kwargs['kernel_repeat'] = 1
         kwargs['kernel_weights'] = None
         kwargs['kernel_train'] = True
-        self.k = k #todo:- add to the config file
-        self.n = n #todo:- add to the config file
+        self.k = kwargs['k_alpha'] 
+        self.n = kwargs['n_alpha']
+         #todo:- add to the config file
+        #todo:- add to the config file
         #----- 2*n + k = hid_dim, so in config for hid_size 64.. put n = 16 and k = 32-------#
         # Set kwargs['n_heads'] as n_kernels for preprocessing kernels
         # Set kwargs['head_dim'] to be original sample input dim
         super().__init__(**kwargs)
         self.kernel_dim = self.k + 2*self.n
+        print('K_alpha', self.k)
         
     def init_kernel_weights(self, kernel_init): # vector alpha init with normalization
         if kernel_init == 'normal':
@@ -152,7 +156,7 @@ class AlphaSSM(SSM):
         #self.p_padding[:, -1] = 1. #last column with 1
         
         # A matrix
-        a = self.init_kernel_weights(self.kernel_init)#alphas eg: (16,64):- 
+        a = self.init_kernel_weights(self.kernel_init)#alphas eg: (16,64):- (no_ssms, ssm_dim)
         self.register("a", a, trainable=True, lr=None, wd=None)
         
         # B matrix
@@ -183,15 +187,15 @@ class AlphaSSM(SSM):
             for i in range(self.k):
                 A[kl, 2*self.n + i, i] = 1 - p[kl, i]
                 A[kl, 2*self.n + i, i +1] = p[kl, i]
-        #print('Alpha_SSM1:', A[0])#to check if matrix is right
+        print('Alpha_SSM1:', A[0])#to check if matrix is right
         #print('Alpha_SSM2', A[1])
-        #print('Alpha_SSM3', A[2])
+       # print('Alpha_SSM3', A[2])
        #self.shift_matrix.to(p.device) + (
                           #oe.contract('h i, h j -> h j i', 
                           #self.p_padding.to(p.device), p) #This A Matrix value aftr each epoch should be saved to plot the A value changes #expecting:- a0 i.e, A[...,:,0]= max among other values. Here this needs to be changed
         
         # Use repeated squares to power A
-        g = krylov(l, A, b, c)
+        g = companion_krylov(l, A, b, c)
         return g
     
     def get_kernel(self, u, c=None, l=None):
@@ -200,7 +204,7 @@ class AlphaSSM(SSM):
         a = (self.norm(self.a, ord=self.norm_order) #L1 norm |a0| + |a1| + ....+|ad| = 1 #to_do for our A the normalization will be different since we are not initializing parameters at the last column. define separate func for norm
              if self.norm_order > 0 else self.a)#edit here
         f = self.matrix_power(l, c, self.b, a).to(u.device)# f is the filter f_y
-        #print('Filter F_y', f, f.shape)
+        print('Filter F_y', f, f.shape)
         return f
     
     def forward(self, u):

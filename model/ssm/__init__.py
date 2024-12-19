@@ -14,7 +14,7 @@ def init_ssm(config):
         ssm = ShiftSSM
     elif config['method'] == 'closed_loop_shift':
         ssm = ClosedLoopShiftSSM
-    elif config['method'] == 'alpha_ssm':
+    elif config['method'] == 'alpha_ssm': #added Alpha_SSM 
         ssm = AlphaSSM
     else:
         raise NotImplementedError(
