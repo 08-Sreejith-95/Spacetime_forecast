@@ -20,6 +20,7 @@ def load_model_config(config, config_dir='./configs/model', args=None):
                 # Load SSM kernel configs
                 c_path = join(config_dir, f"{block_config['ssm_config']}.yaml")
                 block_config['ssm_config'] = OmegaConf.load(c_path)
+                print('Checking custom ssm config', block_config['ssm_config'])# to check if the custom ssm is loaded to the config
                 # Load MLP configs
                 c_path = join(config_dir, f"{block_config['mlp_config']}.yaml")
                 block_config['mlp_config'] = OmegaConf.load(c_path)
@@ -27,6 +28,7 @@ def load_model_config(config, config_dir='./configs/model', args=None):
         
     config = update_embedding_config_from_args(config, args)
     config = update_block_config_from_args(config, args)
+    print('Block configs', config)#to check the configuration file is reading correctly
     config.output_config = update_output_config_from_args(config.output_config, args)
     config.output_config.input_dim = config.output_config.kwargs.input_dim
     config.output_config.output_dim = config.output_config.kwargs.output_dim        
@@ -66,7 +68,7 @@ def update_embedding_config_from_args(config, args):
     config.embedding_config['kwargs']['embedding_dim'] = embedding_dim
     return config
 
-
+#---most probably the problem is here---
 def update_block_config_from_args(config, args):
     # Update encoder only
     # - Update both SSM and MLP configs, and also total number of blocks
@@ -97,7 +99,7 @@ def update_block_config_from_args(config, args):
     encoder_block = config.encoder_config['blocks'][-1]
     if encoder_block.pre_config.kwargs is not None:
         encoder_block.pre_config = update_preprocess_config_from_args(encoder_block.pre_config, args)
-    encoder_block.ssm_config = update_ssm_config_from_args(encoder_block.ssm_config, args)
+    encoder_block.ssm_config = update_ssm_config_from_args(encoder_block.ssm_config, args)# New SSM should be updated here
     encoder_block.mlp_config = update_mlp_config_from_args(encoder_block.mlp_config, args)
     n_blocks = len(config.encoder_config['blocks'])
     if args.n_blocks is not None:
@@ -156,6 +158,7 @@ def update_preprocess_config_from_args(config, args):
 
 
 def update_ssm_config_from_args(config, args):
+    print('Checking if ssm_config is read', config.method)
     if 'companion' in config.method or 'shift' in config.method:
         kwargs = get_companion_ssm_kwargs_from_args(config, args)
     #---added non companion: alpha_ssm----#
