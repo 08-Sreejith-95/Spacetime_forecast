@@ -158,11 +158,13 @@ def update_preprocess_config_from_args(config, args):
 
 
 def update_ssm_config_from_args(config, args):
-    print('Checking if ssm_config is read', config.method)
+    print('Checking if ssm_config is read', config.method)#for debug
     if 'companion' in config.method or 'shift' in config.method:
+        print("COMPANION CONFIg IS READ")
         kwargs = get_companion_ssm_kwargs_from_args(config, args)
     #---added non companion: alpha_ssm----#
     elif 'alpha_ssm' in config.method:
+        print("Alpha Config is READ")
         kwargs = get_alpha_ssm_kwargs_from_args(config, args)
     else:
         raise NotImplementedError('Still need to implement non-companion SSM')
