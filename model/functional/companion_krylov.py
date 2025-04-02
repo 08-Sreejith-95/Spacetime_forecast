@@ -26,10 +26,17 @@ def companion_from_p(p):
     A[..., 1:, :-1] = torch.eye(d - 1, dtype=p.dtype, device=p.device)#replacing all the elements from (1,1) to (d,d-1) with identity matrix
     A[..., -1] = p #replacing the final column with our vector p. 
     return A 
+def get_alpha_matrix(self, p):#todo.- change this function to get_alpha
+    A = self.row_shift_matrix.to(p.device)        
+    for kl in range(self.n_kernels):
+        for i in range(self.k):
+            A[kl, 2*self.n + i, i] = 1 - p[kl, i]
+            A[kl, 2*self.n + i, i +1] = p[kl, i]
+        return A
 
 #To_do: if i want to plugin custom A matrices:- Approach:Introduce a conditional statement to run The krylov by custom matrices if companion is NOne 
 #.....Functions for calculating the convolution filter Fy..... algorithm 1 in paper. ultimately returns Fy
-def companion_krylov(L, p, b, c=None, c_tilde=None):
+def companion_krylov(L, p, b, c=None, c_tilde=None):# bug is here, since i use companion_krylov for multiplication. A is overrided by companion from_P. edit this function. This works only when a is shift + low_rank, for our alpha use krylov
     """
     Compute the Krylov matrix (c^T b, c^T A b, c^T A^2 b, ...), where A = shift + p e_d^T.
     Arguments:

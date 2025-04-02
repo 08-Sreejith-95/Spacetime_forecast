@@ -103,9 +103,9 @@ class CompanionSSM(SSM):
 
 
 
-#---------------Creating SSM with A_alpha:- Thesis project experiment:- state matrix_1-------------------#
+#---------------Creating SSM with Smoothing Delay Memory SSM:- Thesis project experiment:- state matrix_2-------------------#
 
-class AlphaSSM(SSM):
+class SDMSSM(SSM):
     """
     Open-loop implementation of Companion SSM:
     -> y_t = C \sum_{i = 0}^{k - 1 - i} A^k B u_i
@@ -116,35 +116,32 @@ class AlphaSSM(SSM):
         kwargs['kernel_repeat'] = 1
         kwargs['kernel_weights'] = None
         kwargs['kernel_train'] = True
-        self.k = kwargs['k_alpha'] 
-        self.n = kwargs['n_alpha']
-         #todo:- add to the config file
-        #todo:- add to the config file
-        #----- 2*n + k = hid_dim, so in config for hid_size 64.. put n = 16 and k = 32-------#
-        # Set kwargs['n_heads'] as n_kernels for preprocessing kernels
-        # Set kwargs['head_dim'] to be original sample input dim
+        self.segments = 8 #No of delayed active histories 
+        self.cascades = 32 #No_of cascade blocks needed for EMA smoothing for the delayed histories
+        self.A = None
         super().__init__(**kwargs)
-        self.kernel_dim = self.k + 2*self.n
-        print('K_alpha', self.k)
+        self.kernel_dim = self.segments *((self.cascades * 2) + 1) #The  hidden state space dimension increases considerably
         
-    def init_kernel_weights(self, kernel_init): # vector alpha init with normalization
+    def init_kernel_weights(self, kernel_init, alphas = False): #The No of learnable parameters are decreased compared to the companion and alpha
+        if not alphas:
+            n_k, k_sz = (self.n_kernels, self.kernel_dim)
+        else:
+            n_k, k_sz = (self.n_kernels, self.cascades)
+        
         if kernel_init == 'normal':
-            kernel = torch.randn(self.n_kernels, self.kernel_dim)#(No. SSM, SSM dim) eg:- (16, 64). so alpha vector with dim 64 for 16 ssms. This is with normalization
+            kernel = torch.randn(n_k, k_sz)
         elif kernel_init == 'xavier':
-            # Xavier-ish initialization
-            stdv = 1. / math.sqrt(self.kernel_dim)
-            kernel = torch.FloatTensor(self.n_kernels, 
-                                       self.kernel_dim).uniform_(-stdv, stdv)
+            stdv = 1. / math.sqrt(k_sz)
+            kernel = torch.FloatTensor(n_k, k_sz).uniform_(-stdv, stdv)
         else:
             raise NotImplementedError
         return kernel
      #--------------------------------------------------------------------------------#   
-    def init_weights(self):#to_do:- while creating our custom SSMs changes should be made from here. Or use alphas as the vector instead of p and create A matrix accordingly
+    def init_weights(self):
         super().init_weights()  # Initializes skip connection
-        self._fp = (self.n_kernels, self.k)#alpha vector dim
+        #self._fp = (self.n_kernels, self.cascades)#alpha vector dim
         
-        #Alpha vector initialization for each SSMs:- eg:- for 16 SSM's with 64 dim in a single ST layer it will be (16, 64) with different values
-        #self.alphas = torch.rand(*self._fp)#alphas initialized with random values:- to_do: need to normalize and register as trainable params
+  
         # Shift matrix initialization
         self.row_shift_matrix = torch.zeros(self.n_kernels, 
                                         self.kernel_dim, 
@@ -156,7 +153,7 @@ class AlphaSSM(SSM):
         #self.p_padding[:, -1] = 1. #last column with 1
         
         # A matrix
-        a = self.init_kernel_weights(self.kernel_init)#alphas eg: (16,64):- (no_ssms, ssm_dim)
+        a = self.init_kernel_weights(self.kernel_init, alphas = True)#alphas_ EMA trainable parameters
         self.register("a", a, trainable=True, lr=None, wd=None)
         
         # B matrix
@@ -179,23 +176,29 @@ class AlphaSSM(SSM):
             breakpoint()
         # x = F.normalize(x, dim=1, p=ord, eps=1)
         return x
+    def construct_ssm(self,p):
+        A = self.row_shift_matrix.to(p.device)
+        for kl in range(self.n_kernels):
+                for c in range(self.cascades): 
+                    j_offset = 2 * c * self.segments
+                    i_offset = self.segments + 2 * c * self.segments 
+        # Copy (diagonal)
+                    for d in range(self.segments):
+                        A[kl, i_offset + d, j_offset + d] = 1.0
+                        i_offset += self.segments
+        # Merge (two diagonals)
+                    for d in range(self.segments):
+                        A[kl, i_offset + d, j_offset + d] = 0.5 * (1.0 - p[kl, c])
+                        A[kl, i_offset + d, j_offset + d + 1 * self.segments] = 0.5 * (1.0 - p[kl, c])
+                        A[kl, i_offset + d, j_offset + d + 2 * self.segments] = p[kl, c]
+        return A
+
     
     def matrix_power(self, l, c, b, p):
         # Construct Alpha matrix
-        A = self.row_shift_matrix.to(p.device)
-        for kl in range(self.n_kernels):
-            for i in range(self.k):
-                A[kl, 2*self.n + i, i] = 1 - p[kl, i]
-                A[kl, 2*self.n + i, i +1] = p[kl, i]
-        print('Alpha_SSM1:', A[0])#to check if matrix is right
-        #print('Alpha_SSM2', A[1])
-       # print('Alpha_SSM3', A[2])
-       #self.shift_matrix.to(p.device) + (
-                          #oe.contract('h i, h j -> h j i', 
-                          #self.p_padding.to(p.device), p) #This A Matrix value aftr each epoch should be saved to plot the A value changes #expecting:- a0 i.e, A[...,:,0]= max among other values. Here this needs to be changed
-        
-        # Use repeated squares to power A
-        g = companion_krylov(l, A, b, c)
+        self.A = self.construct_ssm(p)
+        #print('Alpha_SSM1:', A[16, 34:62, 34:62])#to check if matrix is right
+        g = krylov(l, self.A, b, c)
         return g
     
     def get_kernel(self, u, c=None, l=None):
@@ -209,13 +212,9 @@ class AlphaSSM(SSM):
     
     def forward(self, u):
         return super().forward(u)
+    
+    
+    
  
-#if __name__ == '__main__':
-       #compare this with companion SSM, here
-       #alpha_ssm = AlphaSSM(n = 2, k = 4, norm_order=1, n_kernels = 3, kernel_dim = 8, model_dim = 16)
-       #no_kernals = alpha_ssm.n_kernels
-       #kernal_dim = alpha_ssm.kernel_dim
-       #u = torch.rand(3, kernal_dim, 10)
-       #alpha_ssm.get_kernel(u)
-       
+
         

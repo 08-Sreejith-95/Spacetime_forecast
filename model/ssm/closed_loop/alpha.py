@@ -4,10 +4,12 @@ import opt_einsum as oe
 from einops import repeat, rearrange
 
 from model.functional.krylov import krylov
-from model.ssm.companion import CompanionSSM
+from model.ssm.companion import CompanionSSM, AlphaSSM
 
-#while creating SSM for decoder replace the A with Alpha matrices
-class ClosedLoopCompanionSSM(CompanionSSM):
+
+
+
+class ClosedLoopAlphaSSM(AlphaSSM):
     """
     Closed-loop implementation of Companion SSM:
     - Instantiate A, B, C; so we can compute both:
@@ -54,12 +56,15 @@ class ClosedLoopCompanionSSM(CompanionSSM):
         k = self.init_kernel_weights(self.kernel_init)
         self.register("k", k, trainable=True, lr=None, wd=None)
     
-    def get_companion_matrix(self, p):#todo.- change this function to get_alpha
+    def get_alpha_matrix(self, p):#todo.- change this function to get_alpha
         # Construct companion matrix
-        return self.shift_matrix.to(p.device) + (
-            oe.contract('h i, h j -> h j i', 
-                        self.p_padding.to(p.device), p)
-        )#todo:- plugin alpha here
+        A = self.row_shift_matrix.to(p.device)        
+        for kl in range(self.n_kernels):
+            for i in range(self.k):
+                A[kl, 2*self.n + i, i] = 1 - p[kl, i]
+                A[kl, 2*self.n + i, i +1] = p[kl, i]
+        return A
+        #todo:- plugin alpha here
     
     def fft_conv_d(self, u, v):
         L   = u.shape[-1]
@@ -82,8 +87,8 @@ class ClosedLoopCompanionSSM(CompanionSSM):
         # Normalize just the non-shift column, 
         # alternatively could normalize A + BK below 
         a = (self.norm(self.a, ord=self.norm_order) 
-             if self.norm_order > 0 else self.a)
-        A = self.get_companion_matrix(a)
+             if self.norm_order > 0 else self.a)#Todo:- there is a chancew of error here, since the a might not instantiate:-
+        A = self.get_alpha_matrix(a)
         
         if self.closed_loop:  # Compute closed-loop forecast
             # Compute hidden state 
@@ -136,4 +141,3 @@ class ClosedLoopCompanionSSM(CompanionSSM):
             else:
                 y_u = None
             return y, y_u
-        
